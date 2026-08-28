@@ -8,9 +8,9 @@
   <style>
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #1d2671, #c33764);
-      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -21,20 +21,72 @@
       max-width: 430px;
       background: white;
       border-radius: 24px;
-      padding: 24px;
+      padding: 22px;
       box-sizing: border-box;
       text-align: center;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.25);
     }
 
-    video, canvas {
+    h1 {
+      margin-top: 0;
+    }
+
+    .guide-text {
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .camera-box {
+      position: relative;
       width: 100%;
-      border-radius: 18px;
       margin-top: 15px;
+      overflow: hidden;
+      border-radius: 20px;
       background: #111;
+      aspect-ratio: 3 / 4;
+    }
+
+    video,
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    video {
+      transform: scaleX(-1);
     }
 
     canvas {
       display: none;
+    }
+
+    .face-guide {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      transform: translate(-50%, -50%);
+      width: 62%;
+      height: 72%;
+      border: 4px solid rgba(255,255,255,0.95);
+      border-radius: 50%;
+      box-sizing: border-box;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.22);
+    }
+
+    .guide-label {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      background: rgba(0,0,0,0.55);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      white-space: nowrap;
     }
 
     button {
@@ -43,41 +95,60 @@
       margin-top: 12px;
       border: none;
       border-radius: 14px;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: bold;
       cursor: pointer;
     }
 
     #startCameraBtn {
-      background: #444;
+      background: #333;
       color: white;
     }
 
     #captureBtn {
-      background: #0066ff;
+      background: #1769ff;
       color: white;
       display: none;
     }
 
+    #retakeBtn {
+      background: #e8e8e8;
+      color: #222;
+      display: none;
+    }
+
     #analyzeBtn {
-      background: #222;
+      background: #6b2cff;
       color: white;
       display: none;
+    }
+
+    #loading {
+      display: none;
+      margin-top: 20px;
+      font-weight: bold;
     }
 
     #result {
       display: none;
       margin-top: 20px;
+      background: #f5f5f5;
+      border-radius: 18px;
       padding: 18px;
-      border-radius: 16px;
-      background: #f4f4f4;
       line-height: 1.7;
     }
 
+    .result-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
     .notice {
-      margin-top: 20px;
       font-size: 12px;
-      color: #777;
+      color: #888;
+      margin-top: 20px;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -88,39 +159,66 @@
 
   <h1>🔮 재미로 보는 관상</h1>
 
-  <p>
-    전면 카메라로 얼굴을 촬영해 보세요.
-  </p>
+  <div class="guide-text">
+    얼굴을 타원 안에 맞춘 뒤<br>
+    사진을 촬영해 주세요.
+  </div>
 
   <button id="startCameraBtn">
     📷 카메라 켜기
   </button>
 
-  <video id="video" autoplay playsinline></video>
+  <div class="camera-box">
+
+    <video
+      id="video"
+      autoplay
+      playsinline>
+    </video>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="faceGuide" class="face-guide"></div>
+
+    <div id="guideLabel" class="guide-label">
+      얼굴을 가이드 안에 맞춰주세요
+    </div>
+
+  </div>
 
   <button id="captureBtn">
     📸 사진 촬영
   </button>
 
-  <canvas id="canvas"></canvas>
+  <button id="retakeBtn">
+    🔄 다시 찍기
+  </button>
 
   <button id="analyzeBtn">
     🔮 내 관상 보기
   </button>
 
+  <div id="loading">
+    🔍 재미있는 관상을 살펴보는 중...
+  </div>
+
   <div id="result"></div>
 
   <div class="notice">
     ※ 재미를 위한 콘텐츠입니다.<br>
-    실제 성격, 능력, 미래를 판단하지 않습니다.
+    얼굴 생김새로 실제 성격, 능력 또는 미래를 판단하지 않습니다.
   </div>
 
 </div>
+
 
 <script>
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
+
+const faceGuide = document.getElementById("faceGuide");
+const guideLabel = document.getElementById("guideLabel");
 
 const startCameraBtn =
   document.getElementById("startCameraBtn");
@@ -128,8 +226,14 @@ const startCameraBtn =
 const captureBtn =
   document.getElementById("captureBtn");
 
+const retakeBtn =
+  document.getElementById("retakeBtn");
+
 const analyzeBtn =
   document.getElementById("analyzeBtn");
+
+const loading =
+  document.getElementById("loading");
 
 const result =
   document.getElementById("result");
@@ -138,26 +242,35 @@ let stream = null;
 
 
 /* 카메라 켜기 */
+
 startCameraBtn.addEventListener("click", async () => {
 
   try {
 
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "user"
-      },
-      audio: false
-    });
+    stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 },
+          height: { ideal: 960 }
+        },
+
+        audio: false
+
+      });
 
     video.srcObject = stream;
 
     startCameraBtn.style.display = "none";
     captureBtn.style.display = "block";
 
-  } catch (error) {
+  }
+
+  catch (error) {
 
     alert(
-      "카메라를 사용할 수 없습니다. 브라우저에서 카메라 권한을 허용해 주세요."
+      "카메라를 사용할 수 없습니다.\n브라우저에서 카메라 권한을 허용해 주세요."
     );
 
   }
@@ -166,13 +279,21 @@ startCameraBtn.addEventListener("click", async () => {
 
 
 /* 사진 촬영 */
+
 captureBtn.addEventListener("click", () => {
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  const ctx =
-    canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
+
+  /*
+  전면 카메라 화면처럼
+  좌우 반전된 상태로 저장
+  */
+
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
 
   ctx.drawImage(
     video,
@@ -182,43 +303,122 @@ captureBtn.addEventListener("click", () => {
     canvas.height
   );
 
-  canvas.style.display = "block";
   video.style.display = "none";
+  canvas.style.display = "block";
+
+  faceGuide.style.display = "none";
+  guideLabel.style.display = "none";
 
   captureBtn.style.display = "none";
+  retakeBtn.style.display = "block";
   analyzeBtn.style.display = "block";
+
+  result.style.display = "none";
+
+});
+
+
+/* 다시 찍기 */
+
+retakeBtn.addEventListener("click", () => {
+
+  canvas.style.display = "none";
+  video.style.display = "block";
+
+  faceGuide.style.display = "block";
+  guideLabel.style.display = "block";
+
+  captureBtn.style.display = "block";
+  retakeBtn.style.display = "none";
+  analyzeBtn.style.display = "none";
+
+  result.style.display = "none";
 
 });
 
 
 /* 재미용 결과 */
+
 const fortunes = [
 
-  "✨ 오늘은 새로운 일에 도전하기 좋은 분위기입니다.",
+  {
+    title: "✨ 활력형 관상",
+    text:
+      "오늘은 새로운 일에 도전해 보기 좋은 분위기입니다. " +
+      "평소보다 적극적으로 행동하면 재미있는 경험을 할 수 있어요. " +
+      "오늘의 행운 키워드는 '도전'입니다."
+  },
 
-  "🌿 차분하게 계획을 세우면 좋은 하루가 될 수 있어요.",
+  {
+    title: "🌿 차분형 관상",
+    text:
+      "오늘은 서두르기보다 차분하게 하나씩 해결하는 것이 좋아요. " +
+      "계획을 세우고 집중하면 만족스러운 하루가 될 수 있습니다. " +
+      "오늘의 행운 키워드는 '집중'입니다."
+  },
 
-  "😊 주변 사람들과 즐겁게 이야기하면 좋은 일이 생길 수 있어요.",
+  {
+    title: "😊 친화형 관상",
+    text:
+      "사람들과 즐겁게 이야기하기 좋은 날입니다. " +
+      "먼저 인사를 건네거나 친절을 베풀면 기분 좋은 일이 생길 수 있어요. " +
+      "오늘의 행운 키워드는 '친절'입니다."
+  },
 
-  "💡 새로운 아이디어가 떠오르기 좋은 날입니다.",
+  {
+    title: "💡 아이디어형 관상",
+    text:
+      "새로운 생각을 떠올려 보기 좋은 분위기입니다. " +
+      "익숙한 문제를 다른 방향에서 바라보면 재미있는 아이디어가 생길 수 있어요. " +
+      "오늘의 행운 키워드는 '창의성'입니다."
+  },
 
-  "🚀 작은 목표부터 하나씩 해보면 좋은 결과가 있을 수 있어요."
+  {
+    title: "🚀 성장형 관상",
+    text:
+      "작은 목표부터 하나씩 해보면 좋은 경험을 쌓을 수 있는 날입니다. " +
+      "어려운 일이 있어도 포기하지 않고 계속해 보세요. " +
+      "오늘의 행운 키워드는 '끈기'입니다."
+  }
 
 ];
 
 
+/* 관상 보기 */
+
 analyzeBtn.addEventListener("click", () => {
 
-  const random =
-    fortunes[
-      Math.floor(Math.random() * fortunes.length)
-    ];
+  analyzeBtn.style.display = "none";
+  retakeBtn.style.display = "none";
 
-  result.innerHTML =
-    "<h2>오늘의 재미 관상</h2>" +
-    "<p>" + random + "</p>";
+  loading.style.display = "block";
+  result.style.display = "none";
 
-  result.style.display = "block";
+  setTimeout(() => {
+
+    const fortune =
+      fortunes[
+        Math.floor(
+          Math.random() * fortunes.length
+        )
+      ];
+
+    loading.style.display = "none";
+
+    result.innerHTML =
+      '<div class="result-title">' +
+      fortune.title +
+      '</div>' +
+
+      '<div>' +
+      fortune.text +
+      '</div>';
+
+    result.style.display = "block";
+
+    retakeBtn.style.display = "block";
+
+  }, 1800);
 
 });
 
