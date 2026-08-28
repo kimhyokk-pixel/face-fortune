@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>재미로 보는 관상</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1d2671, #c33764);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      width: 90%;
+      max-width: 420px;
+      background: white;
+      border-radius: 25px;
+      padding: 28px;
+      box-sizing: border-box;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .guide {
+      color: #666;
+      line-height: 1.5;
+    }
+
+    #preview {
+      display: none;
+      width: 100%;
+      max-height: 380px;
+      object-fit: cover;
+      border-radius: 18px;
+      margin-top: 20px;
+    }
+
+    input[type="file"] {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 14px;
+      background: #222;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #aaa;
+    }
+
+    #loading {
+      display: none;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #result {
+      display: none;
+      margin-top: 25px;
+      padding: 20px;
+      border-radius: 18px;
+      background: #f5f5f5;
+      text-align: left;
+      line-height: 1.7;
+    }
+
+    .fortune-title {
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .notice {
+      margin-top: 25px;
+      font-size: 12px;
+      color: #888;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>🔮 재미로 보는 관상</h1>
+
+  <p class="guide">
+    얼굴 사진을 찍어보세요.<br>
+    재미있는 오늘의 관상 결과를 알려드립니다.
+  </p>
+
+  <input
+    type="file"
+    accept="image/*"
+    capture="user"
+    id="photoInput"
+  >
+
+  <img id="preview">
+
+  <button id="analyzeBtn" disabled>
+    내 관상 보기
+  </button>
+
+  <div id="loading">
+    🔍 관상을 살펴보는 중...
+  </div>
+
+  <div id="result"></div>
+
+  <div class="notice">
+    ※ 이 서비스는 재미를 위한 콘텐츠입니다.<br>
+    얼굴을 통해 실제 성격, 능력 또는 미래를 판단하지 않습니다.
+  </div>
+
+</div>
+
+<script>
+
+const photoInput = document.getElementById("photoInput");
+const preview = document.getElementById("preview");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const result = document.getElementById("result");
+const loading = document.getElementById("loading");
+
+photoInput.addEventListener("change", function(event) {
+
+  const file = event.target.files[0];
+
+  if (file) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+    analyzeBtn.disabled = false;
+    result.style.display = "none";
+  }
+
+});
+
+
+const fortunes = [
+
+  {
+    title: "✨ 활력형 관상",
+    text:
+      "오늘은 새로운 일에 도전하기 좋은 기운이 느껴집니다. " +
+      "주변 사람들과 적극적으로 이야기하면 재미있는 일이 생길 수 있어요. " +
+      "오늘의 행운 키워드는 '도전'입니다."
+  },
+
+  {
+    title: "🌿 차분형 관상",
+    text:
+      "차분하게 계획을 세우면 좋은 결과가 있을 것 같은 날입니다. " +
+      "서두르기보다는 하나씩 해결하는 것이 좋아요. " +
+      "오늘의 행운 키워드는 '집중'입니다."
+  },
+
+  {
+    title: "😊 친화형 관상",
+    text:
+      "사람들과 즐겁게 어울리기 좋은 분위기가 느껴집니다. " +
+      "먼저 인사를 건네거나 도움을 주면 좋은 일이 생길 수 있어요. " +
+      "오늘의 행운 키워드는 '친절'입니다."
+  },
+
+  {
+    title: "💡 아이디어형 관상",
+    text:
+      "새로운 생각이 떠오르기 좋은 날입니다. " +
+      "평소와 다른 방법으로 문제를 바라보면 재미있는 해결책을 발견할 수 있어요. " +
+      "오늘의 행운 키워드는 '창의성'입니다."
+  },
+
+  {
+    title: "🚀 성장형 관상",
+    text:
+      "조금 어려운 일이 있어도 끝까지 해보면 좋은 경험이 될 수 있습니다. " +
+      "작은 목표부터 하나씩 이루어 보세요. " +
+      "오늘의 행운 키워드는 '끈기'입니다."
+  }
+
+];
+
+
+analyzeBtn.addEventListener("click", function() {
+
+  result.style.display = "none";
+  loading.style.display = "block";
+  analyzeBtn.disabled = true;
+
+  setTimeout(function() {
+
+    const randomIndex =
+      Math.floor(Math.random() * fortunes.length);
+
+    const fortune = fortunes[randomIndex];
+
+    loading.style.display = "none";
+
+    result.innerHTML =
+      '<div class="fortune-title">' +
+      fortune.title +
+      '</div>' +
+      '<div>' +
+      fortune.text +
+      '</div>';
+
+    result.style.display = "block";
+
+    analyzeBtn.disabled = false;
+
+  }, 1800);
+
+});
+
+</script>
+
+</body>
+</html>
